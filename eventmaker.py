@@ -41,6 +41,10 @@ def getCredentials():
 
     return credentials
 
+def setEvent(ev,cal):
+    print(f"Creating event: {ev['summary']}...")
+    cal.events().insert(calendarId="primary", body=ev).execute()
+
 def main(sheet):
     cred = getCredentials()
 
@@ -50,13 +54,42 @@ def main(sheet):
         gcalendar = build("calendar", "v3", credentials = cred)
 
         sh = gsheet.open(sheet)
-        print(sh.sheet1.get('A1'))
+        sh = sh.sheet1
+        records = sh.get_all_records()
+
+        for row in records:
+        #sets event to correct format
+            try:
+                #validates time format and parces to datetime
+                startTime = datetime.strptime(row["start"], DATE_FORMAT)
+                endTime = datetime.strptime(row["end"], DATE_FORMAT)
+
+                event = { 
+                    "summary":row["event"],
+                    "description":row["description"],
+                    "location":row["location"],
+                    "start": {
+                        "dateTime":startTime.isoformat()
+                    },
+                    "end": {
+                        "dateTime":endTime.isoformat()
+                    },
+                    "colorId": row["color"]
+                }
+                #create event
+                setEvent(event,gcalendar)
+
+            except ValueError as e:
+                print(f"invalid date time format - {e}")
+
+            except Exception as e:
+                print(f"Error creating event - {e}")
 
     except HttpError as e:
         print(e)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python eventmaker.py [Gspread_Sheet_Name]")
+        print("Usage: python eventmaker.py [Sheet_Name]")
     else:
         main(sys.argv[1])
