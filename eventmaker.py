@@ -43,6 +43,7 @@ def getCredentials():
     return credentials
 
 def getSheetId(url):
+    #looks for id in url
     pattern = r'/spreadsheets/d/([a-zA-Z0-9-_]+)'
     match = re.search(pattern, url)
     if match:
@@ -62,6 +63,7 @@ def main(sheet):
         gsheet = gspread.authorize(cred)
         gcalendar = build("calendar", "v3", credentials = cred)
 
+        #checks whether acess is by name or link
         if sheet.startswith('http'):
             sheetId = getSheetId(sheet)
             if not sheetId:
