@@ -7,6 +7,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+import re
 
 SCOPES = [
     "https://www.googleapis.com/auth/calendar", 
@@ -41,6 +42,14 @@ def getCredentials():
 
     return credentials
 
+def getSheetId(url):
+    pattern = r'/spreadsheets/d/([a-zA-Z0-9-_]+)'
+    match = re.search(pattern, url)
+    if match:
+        return match.group(1)
+    else:
+        return None
+
 def setEvent(ev,cal):
     print(f"Creating event: {ev['summary']}...")
     cal.events().insert(calendarId="primary", body=ev).execute()
@@ -53,7 +62,15 @@ def main(sheet):
         gsheet = gspread.authorize(cred)
         gcalendar = build("calendar", "v3", credentials = cred)
 
-        sh = gsheet.open(sheet)
+        if sheet.startswith('http'):
+            sheetId = getSheetId(sheet)
+            if not sheetId:
+                print('URL inválida')
+                return
+            sh = gsheet.open_by_key(sheetId)
+        else:
+            sh = gsheet.open(sheet)
+
         sh = sh.sheet1
         records = sh.get_all_records()
 
@@ -90,6 +107,6 @@ def main(sheet):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python eventmaker.py [Sheet_Name]")
+        print("Usage: python eventmaker.py [Sheet_Name or URL]")
     else:
         main(sys.argv[1])
